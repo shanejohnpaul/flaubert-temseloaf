@@ -44,7 +44,7 @@ async function initializeDB() {
       await knex("users").insert([{ name: "Shane" }, { name: "Tom" }, { name: "Mary" }, { name: "Paula" }]);
     }
     if ((await knex("comments").select("id")).length == 0) {
-      await knex("comments").insert({ userid: 1, msg: "Hi. This is Shane!" });
+      await knex("comments").insert({ userid: 1, msg: "Hi. This is Shane!", ts: "2022-06-12 14:43:36" });
     }
   } catch (err) {
     console.error(err);
@@ -89,38 +89,13 @@ app.get("/comments", async (req, res) => {
 app.post("/comment", async (req, res) => {
   try {
     const addComment = await knex("comments").insert({ userid: req.body.userid, msg: req.body.msg });
-    if (addComment) res.status(200).send();
+    if (addComment) res.status(200).json("Comment added");
     else res.status(500).send();
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
   }
 });
-
-// app.post("/users", upload.array("images[]", 8), async (req, res) => {
-//   try {
-//     if (req.body.name === "" || req.body.email === "") return res.status(400).send("Name, email required");
-//     const users = await pool.query("INSERT INTO users (name, email, images) VALUES ($1, $2, $3)", [
-//       req.body.name,
-//       req.body.email,
-//       req.files.map((obj) => obj.filename), // save filenames
-//     ]);
-//     //Add embedding of each image with name and filename in another table
-//     //Create python server with the face embedding model - takes image input, gives embeddings
-//     return res.status(200).send();
-//   } catch (err) {
-//     console.log(err);
-//     res.status(500).send(err);
-//   }
-// });
-
-// app.post("/addimages", upload.array("images[]", 8), async (req, res) => {
-//   try {
-//   } catch (error) {
-//     console.log(err);
-//     res.status(500).send(err);
-//   }
-// });
 
 // catch 404 and forward to error handler
 app.use((req, res) => {

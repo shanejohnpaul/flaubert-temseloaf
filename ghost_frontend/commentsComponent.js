@@ -1,10 +1,14 @@
 const commentsTemplate = document.createElement("template");
 commentsTemplate.innerHTML = `
+<link href="./bootstrap/bootstrap.min.css" rel="stylesheet">
 <label for="user-select">Send as user:</label>
-<select id="user-select"></select>
+<select id="user-select" class="my-3"></select> <span class="text-muted">(for testing purposes)</span>
 <br>
-<input type="text" id="comment-input">
-<button id="send-comment">Comment</button>
+<form class="d-flex" id="comment-form">
+  <input type="text" class="form-control me-3" id="comment-input" placeholder="What are your thoughts?">
+  <button class="btn btn-primary" type="submit">Comment</button>
+</form>
+<hr class="my-5"/>
 <div id="comments-div"></div>
 `;
 
@@ -16,9 +20,8 @@ class CommentsComponent extends HTMLElement {
   }
 
   async connectedCallback() {
-    // fetch users and comments from api
+    // fetch users
     this.users = await fetch("http://localhost:3000/users").then((res) => res.json());
-    this.comments = await fetch("http://localhost:3000/comments").then((res) => res.json());
 
     // attach users to select
     const select = this.shadowRoot.querySelector("#user-select");
@@ -26,21 +29,31 @@ class CommentsComponent extends HTMLElement {
       select.options[select.options.length] = new Option(obj.name, obj.id);
     });
 
-    // create user-msg components for each comment
-    const commentsEl = this.shadowRoot.getElementById("comments-div");
-    this.comments.forEach((obj) => {
-      const usermsg = document.createElement("user-msg");
-      usermsg.setAttribute("name", obj.name);
-      usermsg.setAttribute("msg", obj.msg);
-      usermsg.setAttribute("upvotes", obj.upvotes);
-      commentsEl.append(usermsg);
-    });
+    // fetch comments
+    this.getcomments = async () => {
+      this.comments = await fetch("http://localhost:3000/comments").then((res) => res.json());
+      // create user-msg components for each comment
+      const commentsEl = this.shadowRoot.getElementById("comments-div");
 
-    this.shadowRoot.querySelector("#send-comment").addEventListener("click", async () => {
-      console.log({
-        id: this.shadowRoot.getElementById("user-select").value,
-        msg: this.shadowRoot.getElementById("comment-input").value,
+      //remove all child nodes
+      while (commentsEl.hasChildNodes()) {
+        commentsEl.removeChild(commentsEl.lastChild);
+      }
+      this.comments.forEach((obj) => {
+        const usermsg = document.createElement("user-msg");
+        usermsg.setAttribute("name", obj.name);
+        usermsg.setAttribute("msg", obj.msg);
+        usermsg.setAttribute("upvotes", obj.upvotes);
+        usermsg.setAttribute("ts", obj.ts);
+        commentsEl.append(usermsg);
       });
+    };
+
+    await this.getcomments();
+
+    // Comment submit event handler
+    this.sendComment = (event) => {
+      event.preventDefault();
 
       fetch("http://localhost:3000/comment", {
         method: "POST",
@@ -52,12 +65,22 @@ class CommentsComponent extends HTMLElement {
           userid: this.shadowRoot.getElementById("user-select").value,
           msg: this.shadowRoot.getElementById("comment-input").value,
         }),
-      });
-    });
+      })
+        .then((res) => res.json())
+        .then(async (res) => {
+          if (res == "Comment added") {
+            // Refresh comments
+            await this.getcomments();
+            this.shadowRoot.getElementById("comment-input").value = "";
+          }
+        });
+    };
+
+    this.shadowRoot.querySelector("#comment-form").addEventListener("submit", this.sendComment);
   }
 
   disconnectedCallback() {
-    this.shadowRoot.querySelector("#send-comment").removeEventListener("click");
+    this.shadowRoot.querySelector("#comment-form").removeEventListener("submit", this.sendComment);
   }
 }
 
