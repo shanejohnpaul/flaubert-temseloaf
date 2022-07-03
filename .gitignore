@@ -1,2 +1,3 @@
 */node_modules/
 ghost_backend/access.log
+ghost_backend/data.db

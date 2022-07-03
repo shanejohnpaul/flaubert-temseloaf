@@ -29,13 +29,16 @@ class CommentsComponent extends HTMLElement {
       select.options[select.options.length] = new Option(obj.name, obj.id);
     });
 
-    // fetch comments
+    // fetch comments for selected user
     this.getcomments = async () => {
-      this.comments = await fetch("http://localhost:3000/comments").then((res) => res.json());
+      this.comments = await fetch(
+        `http://localhost:3000/comments/${this.shadowRoot.getElementById("user-select").value}`
+      ).then((res) => res.json());
+
       // create user-msg components for each comment
       const commentsEl = this.shadowRoot.getElementById("comments-div");
 
-      //remove all child nodes
+      //remove all child nodes - clear page
       while (commentsEl.hasChildNodes()) {
         commentsEl.removeChild(commentsEl.lastChild);
       }
@@ -45,13 +48,15 @@ class CommentsComponent extends HTMLElement {
         usermsg.setAttribute("msg", obj.msg);
         usermsg.setAttribute("upvotes", obj.upvotes);
         usermsg.setAttribute("ts", obj.ts);
+        usermsg.setAttribute("id", obj.id);
+        usermsg.setAttribute("uservote", obj.uservote);
         commentsEl.append(usermsg);
       });
     };
 
     await this.getcomments();
 
-    // Comment submit event handler
+    // Comment submission event handler
     this.sendComment = (event) => {
       event.preventDefault();
 
@@ -77,10 +82,12 @@ class CommentsComponent extends HTMLElement {
     };
 
     this.shadowRoot.querySelector("#comment-form").addEventListener("submit", this.sendComment);
+    this.shadowRoot.querySelector("#user-select").addEventListener("change", this.getcomments); //for testing
   }
 
   disconnectedCallback() {
     this.shadowRoot.querySelector("#comment-form").removeEventListener("submit", this.sendComment);
+    this.shadowRoot.querySelector("#user-select").removeEventListener("change", this.getcomments); //for testing
   }
 }
 

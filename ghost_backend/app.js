@@ -34,7 +34,17 @@ async function initializeDB() {
           table.foreign("userid").references("id").inTable("users"); // relation users
           table.timestamp("ts").defaultTo(knex.fn.now()); // comment timestamp
           table.string("msg"); //comment content
-          table.integer("upvotes").defaultTo(0); //comment content
+        });
+      }
+    });
+    await knex.schema.hasTable("upvotes").then((exists) => {
+      if (!exists) {
+        return knex.schema.createTable("upvotes", (table) => {
+          table.integer("userid");
+          table.foreign("userid").references("id").inTable("users"); // relation users
+          table.integer("msgid");
+          table.foreign("msgid").references("id").inTable("comments"); // relation comment
+          table.primary(["userid", "msgid"]);
         });
       }
     });
@@ -66,6 +76,8 @@ app.get("/", async (req, res) => {
   res.send("Hi! I'm the api ✌");
 });
 
+//routes
+// get list of users for testing purposes
 app.get("/users", async (req, res) => {
   try {
     const users = await knex("users");
@@ -76,9 +88,18 @@ app.get("/users", async (req, res) => {
   }
 });
 
-app.get("/comments", async (req, res) => {
+// get all comments joined with user names and upvotes
+app.get("/comments/:userid", async (req, res) => {
   try {
-    const comments = await knex("comments").join("users", "comments.userid", "users.id").orderBy("ts", "desc");
+    if (req.params.userid === undefined) return res.status(400).json("User ID required");
+    const comments = await knex.raw(
+      `SELECT comments.id, comments.userid, ts, msg, name, COUNT(upvotes.userid) AS upvotes,  COUNT(CASE WHEN upvotes.userid=${req.params.userid} THEN 1 END) AS uservote
+      FROM comments
+      JOIN users ON comments.userid = users.id
+      LEFT JOIN upvotes ON comments.id = upvotes.msgid
+      GROUP BY comments.id
+      ORDER BY ts DESC`
+    );
     res.status(200).json(comments);
   } catch (err) {
     console.log(err);
@@ -86,10 +107,41 @@ app.get("/comments", async (req, res) => {
   }
 });
 
+// post a comment
 app.post("/comment", async (req, res) => {
   try {
+    if (req.body.userid === undefined) return res.status(400).json("User ID required");
+    if (req.body.msg === undefined) return res.status(400).json("Message required");
     const addComment = await knex("comments").insert({ userid: req.body.userid, msg: req.body.msg });
     if (addComment) res.status(200).json("Comment added");
+    else res.status(500).send();
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+});
+
+// cast an upvote
+app.post("/upvote", async (req, res) => {
+  try {
+    if (req.body.userid === undefined) return res.status(400).json("User ID required");
+    if (req.body.msgid === undefined) return res.status(400).json("Message ID required");
+    const addVote = await knex("upvotes").insert({ userid: req.body.userid, msgid: req.body.msgid });
+    if (addVote) res.status(200).json("Vote added");
+    else res.status(500).send();
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+});
+
+// undo upvote
+app.post("/unvote", async (req, res) => {
+  try {
+    if (req.body.userid === undefined) return res.status(400).json("User ID required");
+    if (req.body.msgid === undefined) return res.status(400).json("Message ID required");
+    const addVote = await knex("upvotes").where({ userid: req.body.userid, msgid: req.body.msgid }).del();
+    if (addVote) res.status(200).json("Vote removed");
     else res.status(500).send();
   } catch (err) {
     console.log(err);

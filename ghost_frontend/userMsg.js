@@ -18,7 +18,7 @@ template.innerHTML = `
 <span id="name" style="font-weight: bold" class="fs-5"></span> <span id="ts" class="text-muted fs-6"></span>
 <p id="msg" class="mb-1"></p>
 <div class="button-div">
-<input id="upvote-btn" type="image" src="./imgs/up-arrow.png" style="width:28px; height:24px"/> <p id="upvotes"></p>
+<input id="upvote-btn" type="image" src="./imgs/up-arrow.svg" style="width:28px; height:24px"/> <p id="upvotes"></p>
 </div>
 <!-- <button id="reply">Reply</button> -->
 </div>
@@ -37,7 +37,7 @@ class UserMsg extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ["name", "msg", "upvotes", "ts"];
+    return ["name", "msg", "upvotes", "ts", "id", "uservote"];
   }
 
   getRelativeTime(d1, d2 = new Date()) {
@@ -59,8 +59,58 @@ class UserMsg extends HTMLElement {
 
   connectedCallback() {
     this.upvoteHandler = () => {
-      alert(this.getAttribute("upvotes"));
+      //create upvote event - captured by commentsComponent
+      if (this.getAttribute("uservote") == 1) {
+        fetch("http://localhost:3000/unvote", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userid: this.shadowRoot.getRootNode().host.getRootNode().host.shadowRoot.getElementById("user-select")
+              .value,
+            msgid: this.getAttribute("id"),
+          }),
+        })
+          .then((res) => res.json())
+          .then(async (res) => {
+            if (res == "Vote removed") {
+              // Refresh comments
+              this.setAttribute("uservote", 0);
+              this.setAttribute("upvotes", this.getAttribute("upvotes") - 1);
+            }
+          });
+      } else {
+        //Send upvote
+        fetch("http://localhost:3000/upvote", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userid: this.shadowRoot.getRootNode().host.getRootNode().host.shadowRoot.getElementById("user-select")
+              .value,
+            msgid: this.getAttribute("id"),
+          }),
+        })
+          .then((res) => res.json())
+          .then(async (res) => {
+            if (res == "Vote added") {
+              // Refresh comments
+              this.setAttribute("uservote", 1);
+              this.setAttribute("upvotes", parseInt(this.getAttribute("upvotes")) + 1);
+            }
+          });
+      }
     };
+
+    // highlight upvote if the user has voted
+    if (this.getAttribute("uservote") == 1)
+      this.shadowRoot.querySelector("#upvote-btn").src = "./imgs/up-arrow-blue.svg";
+
+    // Event listener for upvotes
     this.shadowRoot.querySelector("#upvote-btn").addEventListener("click", this.upvoteHandler);
   }
 
@@ -70,6 +120,10 @@ class UserMsg extends HTMLElement {
     if (prop === "upvotes") this.shadowRoot.querySelector("#upvotes").innerText = newVal;
     if (prop === "ts")
       this.shadowRoot.querySelector("#ts").innerText = "・" + this.getRelativeTime(new Date(newVal + "Z"));
+    if (prop === "uservote") {
+      if (newVal == 1) this.shadowRoot.querySelector("#upvote-btn").src = "./imgs/up-arrow-blue.svg";
+      else this.shadowRoot.querySelector("#upvote-btn").src = "./imgs/up-arrow.svg";
+    }
   }
 
   disconnectedCallback() {
