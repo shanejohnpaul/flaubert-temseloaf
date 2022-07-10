@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import "bootstrap/dist/css/bootstrap.css";
+import { io } from "socket.io-client";
 
 // to derive relative time in words
 function getRelativeTime(d1, d2 = new Date()) {
@@ -52,6 +53,20 @@ class Comments extends React.Component {
     if (users.length) {
       this.setState({ users: users, selectedUser: users[0].id }, async () => await this.getComments());
     }
+
+    //socket connection
+    this.socket = io("ws://localhost:3000");
+
+    //update upvote on vote message
+    this.socket.on("upvote-msg", (msg) => {
+      const comments = this.state.comments.slice();
+      const idx = comments.findIndex((obj) => obj.id === msg.msgid);
+
+      if (idx > -1) {
+        comments[idx].upvotes += msg.vote;
+        this.setState({ comments: comments });
+      }
+    });
   }
 
   async getComments() {
@@ -106,6 +121,7 @@ class Comments extends React.Component {
             comments[idx].uservote = 0;
             comments[idx].upvotes -= 1;
             this.setState({ comments: comments });
+            this.socket.emit("upvote", { msgid: msg.id, vote: -1 });
           }
         });
     } else {
@@ -129,6 +145,7 @@ class Comments extends React.Component {
             comments[idx].uservote = 1;
             comments[idx].upvotes += 1;
             this.setState({ comments: comments });
+            this.socket.emit("upvote", { msgid: msg.id, vote: 1 });
           }
         });
     }

@@ -5,9 +5,13 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const morgan = require("morgan");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const knex = require("./knex");
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 const port = process.env.PORT;
 
 //Initialize tables in database
@@ -154,6 +158,12 @@ app.use((req, res) => {
   res.status(404).send("Page not found");
 });
 
-app.listen(port, () => {
+io.on("connection", (socket) => {
+  socket.on("upvote", (obj) => {
+    socket.broadcast.emit("upvote-msg", obj);
+  });
+});
+
+server.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
