@@ -1,0 +1,23 @@
+.comment-title {
+    font-weight: 600;
+}
+
+.button-div{
+    display: inline-block;
+  }
+
+#msg-name{
+    font-weight: bold
+}
+
+#upvote-btn{
+    width:28px;
+    height:24px;
+    padding-right: 10px;
+    float: left;
+}
+
+#upvotes{
+    margin: 0;
+    float: left;
+  }
