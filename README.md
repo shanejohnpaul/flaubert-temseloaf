@@ -6,7 +6,11 @@ npm start
 ```
 
 # To run the frontend
-Open `index.html` in `ghost_frontend` directory.
+```
+cd ghost_frontend
+npm install
+npm start
+```
 
 <br>
 
