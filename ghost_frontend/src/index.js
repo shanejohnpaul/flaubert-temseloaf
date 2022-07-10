@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import "bootstrap/dist/css/bootstrap.css";
 
+// to derive relative time in words
 function getRelativeTime(d1, d2 = new Date()) {
   const units = {
     year: 24 * 60 * 60 * 1000 * 365,
@@ -20,29 +21,22 @@ function getRelativeTime(d1, d2 = new Date()) {
     if (Math.abs(elapsed) > units[u] || u === "second") return rtf.format(Math.round(elapsed / units[u]), u);
 }
 
-class UserMsg extends React.Component {
-  render() {
-    let upvoteImg = "./imgs/up-arrow.svg";
-    if (this.props.msg.uservote) upvoteImg = "./imgs/up-arrow-blue.svg";
-    return (
-      <div className="mb-3">
-        <span id="msg-name" className="fs-5">
-          {this.props.msg.name}
-        </span>{" "}
-        <span id="ts" className="text-muted fs-6">
-          {"・" + getRelativeTime(new Date(this.props.msg.ts + "Z"))}
-        </span>
-        <p id="msg" className="mb-1">
-          {this.props.msg.msg}
-        </p>
-        <div className="button-div">
-          <input id="upvote-btn" type="image" src={upvoteImg} alt="upvote" onClick={this.props.upvoteHandler} />{" "}
-          <p id="upvotes">{this.props.msg.upvotes}</p>
-        </div>
-        {/* <button id="reply">Reply</button> */}
+// UserMsg component
+function UserMsg(props) {
+  let upvoteImg = "./imgs/up-arrow.svg";
+  if (props.msg.uservote) upvoteImg = "./imgs/up-arrow-blue.svg";
+  return (
+    <div className="mb-3">
+      <span className="msg-name fs-5">{props.msg.name}</span>{" "}
+      <span className="text-muted fs-6">{"・" + getRelativeTime(new Date(props.msg.ts + "Z"))}</span>
+      <p className="mb-1">{props.msg.msg}</p>
+      <div className="button-div">
+        <input className="upvote-btn" type="image" src={upvoteImg} alt="upvote" onClick={props.upvoteHandler} />{" "}
+        <p className="upvotes">{props.msg.upvotes}</p>
       </div>
-    );
-  }
+      {/* <button id="reply">Reply</button> */}
+    </div>
+  );
 }
 
 class Comments extends React.Component {
@@ -176,14 +170,14 @@ class Comments extends React.Component {
         </select>{" "}
         <span className="text-muted">(for testing purposes)</span>
         <br />
-        <form className="d-flex" id="comment-form" onSubmit={this.sendComment}>
-          <input type="text" className="form-control me-3" id="comment-input" placeholder="What are your thoughts?" />
+        <form className="d-flex comment-form" onSubmit={this.sendComment}>
+          <input type="text" className="form-control me-3 comment-input" placeholder="What are your thoughts?" />
           <button className="btn btn-primary" type="submit">
             Comment
           </button>
         </form>
         <hr className="my-5" />
-        <div id="comments-div">{messages}</div>
+        <div className="comments-div">{messages}</div>
       </div>
     );
   }

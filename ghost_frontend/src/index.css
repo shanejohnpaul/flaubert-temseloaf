@@ -6,18 +6,18 @@
     display: inline-block;
   }
 
-#msg-name{
+.msg-name{
     font-weight: bold
 }
 
-#upvote-btn{
+.upvote-btn{
     width:28px;
     height:24px;
     padding-right: 10px;
     float: left;
 }
 
-#upvotes{
+.upvotes{
     margin: 0;
     float: left;
   }
