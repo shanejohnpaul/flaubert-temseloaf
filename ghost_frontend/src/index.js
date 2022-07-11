@@ -108,7 +108,7 @@ class Comments extends React.Component {
   }
 
   async componentDidMount() {
-    const users = await fetch("http://localhost:3000/users").then((res) => res.json());
+    const users = await fetch(`${process.env.REACT_APP_API_URL}/users`).then((res) => res.json());
     if (users.length) {
       this.setState({ users: users, selectedUser: users[0].id }, async () => await this.getComments());
     }
@@ -142,7 +142,9 @@ class Comments extends React.Component {
   }
 
   async getComments() {
-    const comments = await fetch(`http://localhost:3000/comments/${this.state.selectedUser}`).then((res) => res.json());
+    const comments = await fetch(`${process.env.REACT_APP_API_URL}/comments/${this.state.selectedUser}`).then((res) =>
+      res.json()
+    );
 
     // Separate base comments and replies
     const basecomments = [];
@@ -162,7 +164,7 @@ class Comments extends React.Component {
   sendComment(event) {
     event.preventDefault();
 
-    fetch("http://localhost:3000/comment", {
+    fetch(`${process.env.REACT_APP_API_URL}/comment`, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -187,7 +189,7 @@ class Comments extends React.Component {
   upvoteHandler(idx, msg, childidx) {
     if (msg.uservote === 1) {
       // unvote
-      fetch("http://localhost:3000/unvote", {
+      fetch(`${process.env.REACT_APP_API_URL}/unvote`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -217,7 +219,7 @@ class Comments extends React.Component {
         });
     } else {
       //upvote
-      fetch("http://localhost:3000/upvote", {
+      fetch(`${process.env.REACT_APP_API_URL}/upvote`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -248,7 +250,7 @@ class Comments extends React.Component {
   }
 
   replyHandler(msg, parentid, userid) {
-    fetch("http://localhost:3000/comment", {
+    fetch(`${process.env.REACT_APP_API_URL}/comment`, {
       method: "POST",
       headers: {
         Accept: "application/json",
