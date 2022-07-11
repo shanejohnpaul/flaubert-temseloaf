@@ -114,7 +114,7 @@ class Comments extends React.Component {
     }
 
     //socket connection
-    this.socket = io("ws://localhost:3000");
+    this.socket = io(process.env.REACT_APP_API_URL);
 
     //update upvote on vote message
     this.socket.on("upvote-msg", (msg) => {
