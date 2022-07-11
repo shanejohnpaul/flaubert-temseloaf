@@ -21,3 +21,19 @@
     margin: 0;
     float: left;
   }
+
+.reply-btn{
+    padding: 0;
+    margin-left: 1em;
+    border: none;
+    background: none;
+    float: left;
+    font-weight: 600;
+    color: #4752c4;
+}
+
+.replies-div{
+    padding-left: 2em;
+    margin-left: 0.5em;
+    border-left: 2px solid #ccc;
+}

@@ -34,6 +34,7 @@ async function initializeDB() {
       if (!exists) {
         return knex.schema.createTable("comments", (table) => {
           table.increments("id").primary(); // comment ID
+          table.integer("parentid"); // comment's parent ID (for replies)
           table.integer("userid"); // relation users
           table.foreign("userid").references("id").inTable("users"); // relation users
           table.timestamp("ts").defaultTo(knex.fn.now()); // comment timestamp
@@ -97,7 +98,7 @@ app.get("/comments/:userid", async (req, res) => {
   try {
     if (req.params.userid === undefined) return res.status(400).json("User ID required");
     const comments = await knex.raw(
-      `SELECT comments.id, comments.userid, ts, msg, name, COUNT(upvotes.userid) AS upvotes,  COUNT(CASE WHEN upvotes.userid=${req.params.userid} THEN 1 END) AS uservote
+      `SELECT comments.id, comments.userid, parentid, ts, msg, name, COUNT(upvotes.userid) AS upvotes,  COUNT(CASE WHEN upvotes.userid=${req.params.userid} THEN 1 END) AS uservote
       FROM comments
       JOIN users ON comments.userid = users.id
       LEFT JOIN upvotes ON comments.id = upvotes.msgid
@@ -116,7 +117,12 @@ app.post("/comment", async (req, res) => {
   try {
     if (req.body.userid === undefined) return res.status(400).json("User ID required");
     if (req.body.msg === undefined) return res.status(400).json("Message required");
-    const addComment = await knex("comments").insert({ userid: req.body.userid, msg: req.body.msg });
+    if (req.body.parentid === undefined) req.body.parentid = null;
+    const addComment = await knex("comments").insert({
+      userid: req.body.userid,
+      msg: req.body.msg,
+      parentid: req.body.parentid,
+    });
     if (addComment) res.status(200).json("Comment added");
     else res.status(500).send();
   } catch (err) {

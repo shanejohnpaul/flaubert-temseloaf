@@ -22,12 +22,12 @@ function getRelativeTime(d1, d2 = new Date()) {
     if (Math.abs(elapsed) > units[u] || u === "second") return rtf.format(Math.round(elapsed / units[u]), u);
 }
 
-// UserMsg component
-function UserMsg(props) {
+// reply component
+function ReplyMsg(props) {
   let upvoteImg = "./imgs/up-arrow.svg";
   if (props.msg.uservote) upvoteImg = "./imgs/up-arrow-blue.svg";
   return (
-    <div className="mb-3">
+    <div className="mb-2">
       <span className="msg-name fs-5">{props.msg.name}</span>{" "}
       <span className="text-muted fs-6">{"・" + getRelativeTime(new Date(props.msg.ts + "Z"))}</span>
       <p className="mb-1">{props.msg.msg}</p>
@@ -35,9 +35,69 @@ function UserMsg(props) {
         <input className="upvote-btn" type="image" src={upvoteImg} alt="upvote" onClick={props.upvoteHandler} />{" "}
         <p className="upvotes">{props.msg.upvotes}</p>
       </div>
-      {/* <button id="reply">Reply</button> */}
     </div>
   );
+}
+
+// UserMsg component
+class UserMsg extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { replyField: false };
+    this.sendReply = this.sendReply.bind(this);
+  }
+
+  sendReply(event) {
+    event.preventDefault();
+    this.props.replyHandler(event.target[0].value);
+    event.target.reset();
+    this.setState({ replyField: false });
+  }
+
+  render() {
+    let upvoteImg = "./imgs/up-arrow.svg";
+    if (this.props.msg.uservote) upvoteImg = "./imgs/up-arrow-blue.svg";
+    const replies = this.props.msg.replies.map((obj, idx) => {
+      return <ReplyMsg key={idx} msg={obj} upvoteHandler={() => this.props.upvoteHandler(obj, idx)} />;
+    });
+
+    return (
+      <div>
+        <div className="mb-2">
+          <span className="msg-name fs-5">{this.props.msg.name}</span>{" "}
+          <span className="text-muted fs-6">{"・" + getRelativeTime(new Date(this.props.msg.ts + "Z"))}</span>
+          <p className="mb-1">{this.props.msg.msg}</p>
+          <div className="button-div">
+            <input
+              className="upvote-btn"
+              type="image"
+              src={upvoteImg}
+              alt="upvote"
+              onClick={() => this.props.upvoteHandler(this.props.msg)}
+            />{" "}
+            <p className="upvotes">{this.props.msg.upvotes}</p>
+            <button
+              className="reply-btn"
+              onClick={() => {
+                this.setState({ replyField: !this.state.replyField });
+              }}
+            >
+              Reply
+            </button>
+          </div>
+          {this.state.replyField && (
+            <form className="d-flex reply-form" onSubmit={this.sendReply}>
+              <input type="text" className="form-control me-3 reply-input" placeholder="What are your thoughts?" />
+              <button className="btn btn-primary" type="submit">
+                Reply
+              </button>
+            </form>
+          )}
+        </div>
+        <div className="replies-div">{replies}</div>
+      </div>
+    );
+  }
 }
 
 class Comments extends React.Component {
@@ -45,7 +105,6 @@ class Comments extends React.Component {
     super(props);
     this.state = { users: [], selectedUser: undefined, comments: [] };
     this.sendComment = this.sendComment.bind(this);
-    // this.upvoteHandler = this.upvoteHandler.bind(this);
   }
 
   async componentDidMount() {
@@ -60,18 +119,44 @@ class Comments extends React.Component {
     //update upvote on vote message
     this.socket.on("upvote-msg", (msg) => {
       const comments = this.state.comments.slice();
-      const idx = comments.findIndex((obj) => obj.id === msg.msgid);
 
-      if (idx > -1) {
-        comments[idx].upvotes += msg.vote;
-        this.setState({ comments: comments });
+      let found = false;
+      for (let i = 0; i < comments.length; i++) {
+        if (comments[i].id === msg.msgid) {
+          comments[i].upvotes += msg.vote;
+          this.setState({ comments: comments });
+          break;
+        } else {
+          for (let j = 0; j < comments[i].replies.length; j++) {
+            if (comments[i].replies[j].id === msg.msgid) {
+              comments[i].replies[j].upvotes += msg.vote;
+              this.setState({ comments: comments });
+              found = true;
+              break;
+            }
+          }
+        }
+        if (found) break;
       }
     });
   }
 
   async getComments() {
     const comments = await fetch(`http://localhost:3000/comments/${this.state.selectedUser}`).then((res) => res.json());
-    this.setState({ comments: comments });
+
+    // Separate base comments and replies
+    const basecomments = [];
+
+    //iterate from oldest to latest comments
+    for (let i = comments.length - 1; i >= 0; i--) {
+      if (comments[i].parentid == null) basecomments.push({ ...comments[i], replies: [] });
+      else {
+        const idx = basecomments.findIndex((obj) => obj.id === comments[i].parentid);
+        basecomments[idx].replies.push(comments[i]);
+      }
+    }
+
+    this.setState({ comments: basecomments });
   }
 
   sendComment(event) {
@@ -99,7 +184,7 @@ class Comments extends React.Component {
   }
 
   // Handle upvotes and unvotes
-  upvoteHandler(msg, idx) {
+  upvoteHandler(idx, msg, childidx) {
     if (msg.uservote === 1) {
       // unvote
       fetch("http://localhost:3000/unvote", {
@@ -118,8 +203,14 @@ class Comments extends React.Component {
           if (res === "Vote removed") {
             // Refresh comments
             const comments = this.state.comments.slice();
-            comments[idx].uservote = 0;
-            comments[idx].upvotes -= 1;
+            if (childidx === -1) {
+              comments[idx].uservote = 0;
+              comments[idx].upvotes -= 1;
+            } else {
+              comments[idx].replies[childidx].uservote = 0;
+              comments[idx].replies[childidx].upvotes -= 1;
+            }
+
             this.setState({ comments: comments });
             this.socket.emit("upvote", { msgid: msg.id, vote: -1 });
           }
@@ -142,13 +233,40 @@ class Comments extends React.Component {
           if (res === "Vote added") {
             // Refresh comments
             const comments = this.state.comments.slice();
-            comments[idx].uservote = 1;
-            comments[idx].upvotes += 1;
+            if (childidx === -1) {
+              comments[idx].uservote = 1;
+              comments[idx].upvotes += 1;
+            } else {
+              comments[idx].replies[childidx].uservote = 1;
+              comments[idx].replies[childidx].upvotes += 1;
+            }
             this.setState({ comments: comments });
             this.socket.emit("upvote", { msgid: msg.id, vote: 1 });
           }
         });
     }
+  }
+
+  replyHandler(msg, parentid, userid) {
+    fetch("http://localhost:3000/comment", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userid: userid,
+        msg: msg,
+        parentid: parentid,
+      }),
+    })
+      .then((res) => res.json())
+      .then(async (res) => {
+        if (res === "Comment added") {
+          // Refresh comments
+          await this.getComments();
+        }
+      });
   }
 
   render() {
@@ -160,16 +278,21 @@ class Comments extends React.Component {
       );
     });
 
-    const messages = this.state.comments.map((obj, idx) => {
-      return (
+    const messages = [];
+
+    // do in reverse
+    for (let i = this.state.comments.length - 1; i >= 0; i--) {
+      const obj = this.state.comments[i];
+      messages.push(
         <UserMsg
           key={obj.id}
           msg={obj}
           userid={this.state.selectedUser}
-          upvoteHandler={() => this.upvoteHandler(obj, idx)}
+          upvoteHandler={(msg, childidx = -1) => this.upvoteHandler(i, msg, childidx)}
+          replyHandler={(msg) => this.replyHandler(msg, obj.id, this.state.selectedUser)}
         />
       );
-    });
+    }
 
     return (
       <div className="container my-3">
