@@ -12,6 +12,9 @@ npm install
 npm start
 ```
 
+# Note
+- Delete data.db when switched between versions
+
 <br>
 
 Committed `.env` file for testing purposes
