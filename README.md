@@ -13,7 +13,7 @@ npm start
 ```
 
 # Note
-- Delete data.db when switched between versions
+- Delete data.db when switching between versions
 
 <br>
 
